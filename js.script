@@ -17,11 +17,36 @@ document.addEventListener('DOMContentLoaded', function() {
     const supportButton = document.getElementById('supportButton');
     const userRegion = document.getElementById('userRegion');
     
-    // Состояние приложения
-    let isOn = false;
-    let attempts = 3;
-    let isLocked = false;
-    let energy = 100;
+    // Функция для работы с localStorage
+    const storage = {
+        // Получить сохраненное значение
+        get: function(key, defaultValue) {
+            const value = localStorage.getItem(key);
+            return value !== null ? JSON.parse(value) : defaultValue;
+        },
+        
+        // Сохранить значение
+        set: function(key, value) {
+            localStorage.setItem(key, JSON.stringify(value));
+        },
+        
+        // Очистить сохранения (для тестирования)
+        clear: function() {
+            localStorage.removeItem('antiban_attempts');
+            localStorage.removeItem('antiban_isLocked');
+            localStorage.removeItem('antiban_energy');
+            localStorage.removeItem('antiban_lastUsed');
+            localStorage.removeItem('antiban_totalUses');
+        }
+    };
+    
+    // Загружаем сохраненное состояние или используем значения по умолчанию
+    let attempts = storage.get('antiban_attempts', 3);
+    let isLocked = storage.get('antiban_isLocked', false);
+    let energy = storage.get('antiban_energy', 100);
+    let isOn = false; // Всегда начинаем с выключенного состояния
+    let lastUsed = storage.get('antiban_lastUsed', null);
+    let totalUses = storage.get('antiban_totalUses', 0);
     
     // Случайные регионы для демонстрации
     const regions = [
@@ -55,8 +80,46 @@ document.addEventListener('DOMContentLoaded', function() {
     };
     
     // Инициализация
-    updateUI();
-    simulateRegionDetection();
+    initApp();
+    
+    // Функция инициализации приложения
+    function initApp() {
+        // Показываем информацию о сохраненном прогрессе
+        showWelcomeMessage();
+        
+        // Обновляем интерфейс
+        updateUI();
+        simulateRegionDetection();
+        
+        // Восстанавливаем состояние блокировки если нужно
+        if (isLocked) {
+            setTimeout(() => {
+                lockSystem();
+            }, 500);
+        }
+    }
+    
+    // Показать приветственное сообщение с информацией о прогрессе
+    function showWelcomeMessage() {
+        if (lastUsed) {
+            const lastDate = new Date(lastUsed).toLocaleDateString('ru-RU');
+            const lastTime = new Date(lastUsed).toLocaleTimeString('ru-RU', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+            
+            showMessage(`Добро пожаловать обратно! Последнее использование: ${lastDate} в ${lastTime}. Осталось попыток: ${attempts}`, "info");
+        } else {
+            showMessage("Добро пожаловать в Анти-Бан систему! У вас есть 3 пробные попытки.", "info");
+        }
+        
+        // Показываем общую статистику
+        if (totalUses > 0) {
+            setTimeout(() => {
+                showMessage(`Всего использовано: ${totalUses} раз`, "info");
+            }, 1500);
+        }
+    }
     
     // Обработчик клика на переключатель
     switchContainer.addEventListener('click', function() {
@@ -71,6 +134,12 @@ document.addEventListener('DOMContentLoaded', function() {
         // Если включаем - используем попытку
         if (isOn) {
             attempts--;
+            totalUses++;
+            
+            // Сохраняем состояние
+            saveState();
+            
+            // Обновляем счетчик
             updateAttempts();
             
             // Случайное сообщение при включении
@@ -99,10 +168,23 @@ document.addEventListener('DOMContentLoaded', function() {
         if (attempts <= 0) {
             setTimeout(() => {
                 lockSystem();
+                saveState();
                 showBuyModal();
             }, 1000);
         }
     });
+    
+    // Функция сохранения состояния
+    function saveState() {
+        storage.set('antiban_attempts', attempts);
+        storage.set('antiban_isLocked', isLocked);
+        storage.set('antiban_energy', energy);
+        storage.set('antiban_lastUsed', new Date().toISOString());
+        storage.set('antiban_totalUses', totalUses);
+        
+        // Логируем сохранение (для отладки)
+        console.log('Состояние сохранено:', { attempts, isLocked, energy, totalUses });
+    }
     
     // Функция обновления интерфейса
     function updateUI() {
@@ -337,6 +419,9 @@ document.addEventListener('DOMContentLoaded', function() {
             if (energy < 0) energy = 0;
             energyLevel.textContent = `${Math.round(energy)}%`;
             
+            // Сохраняем изменение энергии
+            saveState();
+            
             // Если энергия на исходе, мигаем предупреждением
             if (energy <= 10) {
                 energyLevel.style.animation = energyLevel.style.animation ? "" : "pulse 0.5s infinite alternate";
@@ -352,11 +437,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     }, 3000);
-    
-    // Показать приветственное сообщение
-    setTimeout(() => {
-        showMessage("Добро пожаловать в Анти-Бан систему! У вас есть 3 пробные попытки.", "info");
-    }, 1000);
     
     // Добавить звуковые эффекты (опционально)
     switchContainer.addEventListener('mousedown', function() {
@@ -450,4 +530,67 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     }, 3000);
+    
+    // Добавить кнопку сброса прогресса (скрытую, для отладки)
+    addResetButton();
+    
+    // Функция добавления кнопки сброса (скрытая)
+    function addResetButton() {
+        const resetButton = document.createElement('button');
+        resetButton.innerHTML = '🔄 Сбросить прогресс';
+        resetButton.style.position = 'fixed';
+        resetButton.style.bottom = '10px';
+        resetButton.style.right = '10px';
+        resetButton.style.padding = '5px 10px';
+        resetButton.style.fontSize = '12px';
+        resetButton.style.backgroundColor = '#333';
+        resetButton.style.color = '#0f0';
+        resetButton.style.border = '1px solid #0f0';
+        resetButton.style.borderRadius = '5px';
+        resetButton.style.cursor = 'pointer';
+        resetButton.style.zIndex = '1000';
+        resetButton.style.opacity = '0.3';
+        resetButton.style.transition = 'opacity 0.3s';
+        
+        resetButton.addEventListener('mouseenter', () => {
+            resetButton.style.opacity = '1';
+        });
+        
+        resetButton.addEventListener('mouseleave', () => {
+            resetButton.style.opacity = '0.3';
+        });
+        
+        resetButton.addEventListener('click', () => {
+            if (confirm('Вы уверены, что хотите сбросить весь прогресс? Попытки восстановятся до 3.')) {
+                storage.clear();
+                attempts = 3;
+                isLocked = false;
+                energy = 100;
+                isOn = false;
+                totalUses = 0;
+                lastUsed = null;
+                
+                updateUI();
+                switchContainer.classList.remove('locked');
+                lockIcon.style.opacity = "0";
+                
+                showMessage("Прогресс сброшен! Попытки восстановлены.", "success");
+                
+                // Перезагружаем страницу через 1.5 секунды
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            }
+        });
+        
+        document.body.appendChild(resetButton);
+    }
+    
+    // Сохраняем состояние при закрытии страницы
+    window.addEventListener('beforeunload', function() {
+        saveState();
+    });
+    
+    // Периодическое сохранение (на всякий случай)
+    setInterval(saveState, 30000); // Каждые 30 секунд
 });
