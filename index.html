@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Анти-Бан</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <h1 class="main-title glow-text">АНТИ-БАН</h1>
+        
+        <div class="switch-container" id="switchContainer">
+            <div class="switch-background"></div>
+            
+            <div class="switch-label left-label active">
+                <span class="label-text">OFF</span>
+                <div class="label-glow red-glow"></div>
+            </div>
+            
+            <div class="switch-label right-label">
+                <span class="label-text">ON</span>
+                <div class="label-glow green-glow"></div>
+            </div>
+            
+            <div class="switch-slider" id="switchSlider"></div>
+            
+            <div class="lock-icon" id="lockIcon">
+                <i class="fas fa-lock"></i>
+            </div>
+        </div>
+        
+        <div class="counter-container">
+            <div class="counter-text">Осталось попыток: <span id="attemptsCount">3</span></div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="attempts-dots">
+                <div class="attempt-dot active"></div>
+                <div class="attempt-dot active"></div>
+                <div class="attempt-dot active"></div>
+            </div>
+        </div>
+        
+        <div class="status-message" id="statusMessage">
+            <i class="fas fa-power-off"></i>
+            <span>Система отключена</span>
+        </div>
+        
+        <div class="message-container" id="messageContainer"></div>
+        
+        <p class="subtitle glow-text">БЕТА ВЕРСИЯ</p>
+        
+        <div class="debug-info">
+            <div class="debug-item">
+                <i class="fas fa-shield-alt"></i>
+                <span>Защита от бана активирована</span>
+            </div>
+            <div class="debug-item">
+                <i class="fas fa-bolt"></i>
+                <span>Энергия: <span id="energyLevel">100%</span></span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Модальное окно покупки -->
+    <div class="buy-modal" id="buyModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-exclamation-triangle"></i> Пробный период завершен</h2>
+                <button class="close-modal" id="closeModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Вы использовали все 3 попытки активации Анти-Бана.</p>
+                <p>Для продолжения работы приобретите дополнительные попытки:</p>
+                
+                <div class="pricing-options">
+                    <div class="pricing-option">
+                        <h3>5 попыток</h3>
+                        <div class="price">999 ₽</div>
+                        <button class="buy-button" data-plan="basic">
+                            <i class="fas fa-shopping-cart"></i> Купить
+                        </button>
+                    </div>
+                    <div class="pricing-option popular">
+                        <div class="popular-badge">ПОПУЛЯРНОЕ</div>
+                        <h3>15 попыток</h3>
+                        <div class="price">1999 ₽</div>
+                        <button class="buy-button" data-plan="premium">
+                            <i class="fas fa-crown"></i> Купить
+                        </button>
+                    </div>
+                    <div class="pricing-option">
+                        <h3>50 попыток</h3>
+                        <div class="price">4999 ₽</div>
+                        <button class="buy-button" data-plan="ultimate">
+                            <i class="fas fa-rocket"></i> Купить
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="warning">
+                    <i class="fas fa-info-circle"></i>
+                    <span>При покупке вы получаете полную защиту от банов на 30 дней!</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Окно ошибки региона -->
+    <div class="region-error-modal" id="regionErrorModal">
+        <div class="error-modal-content">
+            <div class="error-modal-header">
+                <div class="error-icon">
+                    <i class="fas fa-globe-europe"></i>
+                </div>
+                <h2>Ошибка региона</h2>
+                <button class="close-error-modal" id="closeErrorModal">&times;</button>
+            </div>
+            <div class="error-modal-body">
+                <div class="error-message">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <h3>Извините, но в вашем регионе эта функция недоступна</h3>
+                </div>
+                
+                <div class="region-details">
+                    <div class="region-info">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <div class="info-text">
+                            <span class="info-label">Ваш регион:</span>
+                            <span class="info-value" id="userRegion">Определяется...</span>
+                        </div>
+                    </div>
+                    
+                    <div class="region-info">
+                        <i class="fas fa-ban"></i>
+                        <div class="info-text">
+                            <span class="info-label">Ограничения:</span>
+                            <span class="info-value">Покупки заблокированы</span>
+                        </div>
+                    </div>
+                    
+                    <div class="region-info">
+                        <i class="fas fa-clock"></i>
+                        <div class="info-text">
+                            <span class="info-label">Доступно с:</span>
+                            <span class="info-value">Неизвестно</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="suggestion-box">
+                    <h4><i class="fas fa-lightbulb"></i> Что вы можете сделать:</h4>
+                    <ul class="suggestion-list">
+                        <li><i class="fas fa-check-circle"></i> Используйте VPN для смены региона</li>
+                        <li><i class="fas fa-check-circle"></i> Обратитесь в поддержку за помощью</li>
+                        <li><i class="fas fa-check-circle"></i> Подождите, пока услуга станет доступной</li>
+                    </ul>
+                </div>
+                
+                <div class="region-warning">
+                    <i class="fas fa-shield-alt"></i>
+                    <p>Система автоматически определяет ваш регион по IP-адресу. Обход ограничений может нарушить условия использования.</p>
+                </div>
+                
+                <div class="error-modal-actions">
+                    <button class="btn-secondary" id="retryButton">
+                        <i class="fas fa-redo"></i> Повторить попытку
+                    </button>
+                    <button class="btn-primary" id="supportButton">
+                        <i class="fas fa-headset"></i> Служба поддержки
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="js.script"></script>
+</body>
+</html>

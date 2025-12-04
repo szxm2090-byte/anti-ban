@@ -1,0 +1,453 @@
+document.addEventListener('DOMContentLoaded', function() {
+    // Элементы DOM
+    const switchContainer = document.getElementById('switchContainer');
+    const switchSlider = document.getElementById('switchSlider');
+    const statusMessage = document.getElementById('statusMessage');
+    const messageContainer = document.getElementById('messageContainer');
+    const attemptsCount = document.getElementById('attemptsCount');
+    const progressFill = document.getElementById('progressFill');
+    const buyModal = document.getElementById('buyModal');
+    const closeModal = document.getElementById('closeModal');
+    const lockIcon = document.getElementById('lockIcon');
+    const energyLevel = document.getElementById('energyLevel');
+    const attemptDots = document.querySelectorAll('.attempt-dot');
+    const regionErrorModal = document.getElementById('regionErrorModal');
+    const closeErrorModal = document.getElementById('closeErrorModal');
+    const retryButton = document.getElementById('retryButton');
+    const supportButton = document.getElementById('supportButton');
+    const userRegion = document.getElementById('userRegion');
+    
+    // Состояние приложения
+    let isOn = false;
+    let attempts = 3;
+    let isLocked = false;
+    let energy = 100;
+    
+    // Случайные регионы для демонстрации
+    const regions = [
+        "Россия (заблокировано)",
+        "Беларусь (ограничено)",
+        "Казахстан (ограничено)",
+        "Украина (заблокировано)",
+        "Санкционный список стран",
+        "Неопознанный регион"
+    ];
+    
+    // Сообщения для разных состояний
+    const messages = {
+        off: [
+            "Система защиты отключена",
+            "Бан-щики могут вас обнаружить!",
+            "Риск бана: ВЫСОКИЙ"
+        ],
+        on: [
+            "Защита от бана активирована!",
+            "Ваш аккаунт под защитой",
+            "Невидимость: АКТИВИРОВАНА",
+            "Бан-щики вас не видят!",
+            "Шифрование данных: ВКЛЮЧЕНО"
+        ],
+        warning: [
+            "Внимание! Защита ослабла",
+            "Энергия системы на исходе",
+            "Рекомендуется перезарядка"
+        ]
+    };
+    
+    // Инициализация
+    updateUI();
+    simulateRegionDetection();
+    
+    // Обработчик клика на переключатель
+    switchContainer.addEventListener('click', function() {
+        if (isLocked) {
+            showMessage("Система заблокирована! Попытки закончились.", "error");
+            return;
+        }
+        
+        // Переключение состояния
+        isOn = !isOn;
+        
+        // Если включаем - используем попытку
+        if (isOn) {
+            attempts--;
+            updateAttempts();
+            
+            // Случайное сообщение при включении
+            const randomMessage = messages.on[Math.floor(Math.random() * messages.on.length)];
+            showMessage(randomMessage, "success");
+            
+            // Анимация энергопотребления
+            energy -= 25;
+            if (energy < 0) energy = 0;
+            energyLevel.textContent = `${energy}%`;
+            
+            // Если энергия низкая, показать предупреждение
+            if (energy <= 25) {
+                const warningMsg = messages.warning[Math.floor(Math.random() * messages.warning.length)];
+                showMessage(warningMsg, "warning");
+            }
+        } else {
+            // Случайное сообщение при выключении
+            const randomMessage = messages.off[Math.floor(Math.random() * messages.off.length)];
+            showMessage(randomMessage, "info");
+        }
+        
+        updateUI();
+        
+        // Проверка, закончились ли попытки
+        if (attempts <= 0) {
+            setTimeout(() => {
+                lockSystem();
+                showBuyModal();
+            }, 1000);
+        }
+    });
+    
+    // Функция обновления интерфейса
+    function updateUI() {
+        // Переключатель
+        if (isOn) {
+            switchContainer.classList.add('switch-on');
+            switchSlider.textContent = "ON";
+            statusMessage.innerHTML = '<i class="fas fa-shield-alt"></i><span>Защита активирована</span>';
+            statusMessage.style.borderColor = "#0f0";
+            statusMessage.style.boxShadow = "0 0 20px rgba(0, 255, 0, 0.5)";
+        } else {
+            switchContainer.classList.remove('switch-on');
+            switchSlider.textContent = "OFF";
+            statusMessage.innerHTML = '<i class="fas fa-power-off"></i><span>Система отключена</span>';
+            statusMessage.style.borderColor = "#f00";
+            statusMessage.style.boxShadow = "0 0 20px rgba(255, 0, 0, 0.3)";
+        }
+        
+        // Подсветка меток
+        const leftLabel = document.querySelector('.left-label');
+        const rightLabel = document.querySelector('.right-label');
+        
+        if (isOn) {
+            leftLabel.classList.remove('active');
+            rightLabel.classList.add('active');
+        } else {
+            leftLabel.classList.add('active');
+            rightLabel.classList.remove('active');
+        }
+        
+        // Обновление счетчика попыток
+        attemptsCount.textContent = attempts;
+        progressFill.style.width = `${(attempts / 3) * 100}%`;
+        
+        // Обновление точек попыток
+        attemptDots.forEach((dot, index) => {
+            if (index < attempts) {
+                dot.classList.add('active');
+                dot.classList.remove('inactive');
+            } else {
+                dot.classList.remove('active');
+                dot.classList.add('inactive');
+            }
+        });
+    }
+    
+    // Функция обновления счетчика попыток
+    function updateAttempts() {
+        if (attempts < 0) attempts = 0;
+    }
+    
+    // Функция блокировки системы
+    function lockSystem() {
+        isLocked = true;
+        switchContainer.classList.add('locked');
+        lockIcon.style.opacity = "1";
+        showMessage("Система заблокирована! Пробный период завершен.", "error");
+    }
+    
+    // Функция показа сообщений
+    function showMessage(text, type = "info") {
+        // Очищаем контейнер
+        messageContainer.innerHTML = '';
+        
+        // Создаем новое сообщение
+        const message = document.createElement('div');
+        message.className = `message message-${type}`;
+        message.textContent = text;
+        
+        // Добавляем иконку в зависимости от типа
+        let icon = '';
+        switch(type) {
+            case "success":
+                icon = '<i class="fas fa-check-circle"></i> ';
+                message.style.color = "#0f0";
+                break;
+            case "error":
+                icon = '<i class="fas fa-exclamation-circle"></i> ';
+                message.style.color = "#f00";
+                break;
+            case "warning":
+                icon = '<i class="fas fa-exclamation-triangle"></i> ';
+                message.style.color = "#ffcc00";
+                break;
+            default:
+                icon = '<i class="fas fa-info-circle"></i> ';
+                message.style.color = "#0af";
+        }
+        
+        message.innerHTML = icon + text;
+        
+        // Добавляем в контейнер
+        messageContainer.appendChild(message);
+        
+        // Автоматическое удаление через 5 секунд
+        setTimeout(() => {
+            if (message.parentNode) {
+                message.style.opacity = "0";
+                message.style.transform = "translateY(-10px)";
+                setTimeout(() => {
+                    if (message.parentNode) {
+                        messageContainer.removeChild(message);
+                    }
+                }, 500);
+            }
+        }, 5000);
+    }
+    
+    // Функция показа модального окна покупки
+    function showBuyModal() {
+        buyModal.classList.add('active');
+        document.body.style.overflow = "hidden";
+    }
+    
+    // Функция скрытия модального окна
+    function hideBuyModal() {
+        buyModal.classList.remove('active');
+        document.body.style.overflow = "auto";
+    }
+    
+    // Функция показа окна ошибки региона
+    function showRegionError(plan) {
+        hideBuyModal(); // Скрываем окно покупки
+        
+        // Показываем окно ошибки с небольшой задержкой для эффекта
+        setTimeout(() => {
+            regionErrorModal.classList.add('active');
+            document.body.style.overflow = "hidden";
+            
+            // Показываем сообщение в основном контейнере
+            showMessage(`Попытка покупки тарифа "${plan}" отклонена. Ваш регион не поддерживается.`, "error");
+        }, 300);
+    }
+    
+    // Функция скрытия окна ошибки региона
+    function hideRegionError() {
+        regionErrorModal.classList.remove('active');
+        document.body.style.overflow = "auto";
+    }
+    
+    // Симуляция определения региона
+    function simulateRegionDetection() {
+        setTimeout(() => {
+            const randomRegion = regions[Math.floor(Math.random() * regions.length)];
+            userRegion.textContent = randomRegion;
+            userRegion.style.color = "#ff6666";
+            userRegion.style.animation = "pulse-red 2s infinite";
+        }, 1500);
+    }
+    
+    // Закрытие модального окна покупки
+    closeModal.addEventListener('click', hideBuyModal);
+    
+    // Закрытие модального окна ошибки региона
+    closeErrorModal.addEventListener('click', hideRegionError);
+    
+    // Закрытие модальных окон при клике вне их
+    buyModal.addEventListener('click', function(e) {
+        if (e.target === buyModal) {
+            hideBuyModal();
+        }
+    });
+    
+    regionErrorModal.addEventListener('click', function(e) {
+        if (e.target === regionErrorModal) {
+            hideRegionError();
+        }
+    });
+    
+    // Обработчики кнопок покупки (все показывают ошибку региона)
+    document.querySelectorAll('.buy-button').forEach(button => {
+        button.addEventListener('click', function() {
+            const plan = this.getAttribute('data-plan');
+            const planNames = {
+                'basic': 'Базовый (5 попыток)',
+                'premium': 'Премиум (15 попыток)',
+                'ultimate': 'Ультимейт (50 попыток)'
+            };
+            
+            showRegionError(planNames[plan] || "Неизвестный тариф");
+        });
+    });
+    
+    // Обработчик кнопки "Повторить попытку"
+    retryButton.addEventListener('click', function() {
+        hideRegionError();
+        
+        // Показываем сообщение о повторной попытке
+        setTimeout(() => {
+            showMessage("Повторная проверка региона...", "info");
+            
+            // Снова определяем регион (случайный)
+            setTimeout(() => {
+                const randomRegion = regions[Math.floor(Math.random() * regions.length)];
+                userRegion.textContent = randomRegion;
+                showMessage("Регион проверен. Ограничения все еще действуют.", "error");
+                
+                // Показываем окно покупки снова
+                setTimeout(() => {
+                    showBuyModal();
+                }, 1000);
+            }, 1500);
+        }, 300);
+    });
+    
+    // Обработчик кнопки "Служба поддержки"
+    supportButton.addEventListener('click', function() {
+        hideRegionError();
+        
+        setTimeout(() => {
+            showMessage("Подключение к службе поддержки...", "info");
+            
+            // Шуточное сообщение о поддержке
+            setTimeout(() => {
+                showMessage("Служба поддержки: 'Извините, мы ничего не можем сделать с санкциями. Попробуйте VPN.'", "warning");
+                
+                // Показываем предложение вернуться к покупке
+                setTimeout(() => {
+                    const retryConfirm = confirm("Вернуться к покупке тарифов?");
+                    if (retryConfirm) {
+                        showBuyModal();
+                    }
+                }, 2000);
+            }, 2000);
+        }, 500);
+    });
+    
+    // Анимация энергопотребления (симуляция)
+    setInterval(() => {
+        if (isOn && energy > 0) {
+            energy -= 0.5;
+            if (energy < 0) energy = 0;
+            energyLevel.textContent = `${Math.round(energy)}%`;
+            
+            // Если энергия на исходе, мигаем предупреждением
+            if (energy <= 10) {
+                energyLevel.style.animation = energyLevel.style.animation ? "" : "pulse 0.5s infinite alternate";
+            } else {
+                energyLevel.style.animation = "";
+            }
+            
+            // Если энергия закончилась, выключаем систему
+            if (energy <= 0) {
+                isOn = false;
+                updateUI();
+                showMessage("Энергия системы исчерпана! Защита отключена.", "error");
+            }
+        }
+    }, 3000);
+    
+    // Показать приветственное сообщение
+    setTimeout(() => {
+        showMessage("Добро пожаловать в Анти-Бан систему! У вас есть 3 пробные попытки.", "info");
+    }, 1000);
+    
+    // Добавить звуковые эффекты (опционально)
+    switchContainer.addEventListener('mousedown', function() {
+        // В реальном приложении можно добавить звук щелчка
+        console.log("Щелчок переключателя (звуковой эффект)");
+    });
+    
+    // Добавить эффект при наведении на точки попыток
+    attemptDots.forEach(dot => {
+        dot.addEventListener('mouseenter', function() {
+            if (this.classList.contains('inactive')) {
+                this.style.transform = "scale(1.3)";
+                this.style.backgroundColor = "#f00";
+            }
+        });
+        
+        dot.addEventListener('mouseleave', function() {
+            this.style.transform = "";
+            if (this.classList.contains('inactive')) {
+                this.style.backgroundColor = "#333";
+            }
+        });
+    });
+    
+    // Добавить эффект для кнопок покупки
+    document.querySelectorAll('.buy-button').forEach(button => {
+        button.addEventListener('mouseenter', function() {
+            this.style.transform = "scale(1.05)";
+            this.style.boxShadow = "0 0 20px rgba(255, 255, 255, 0.3)";
+        });
+        
+        button.addEventListener('mouseleave', function() {
+            this.style.transform = "";
+            this.style.boxShadow = "";
+        });
+    });
+    
+    // Добавить эффекты для кнопок в окне ошибки
+    document.querySelectorAll('.btn-primary, .btn-secondary').forEach(button => {
+        button.addEventListener('mouseenter', function() {
+            this.style.transform = "translateY(-2px)";
+        });
+        
+        button.addEventListener('mouseleave', function() {
+            this.style.transform = "";
+        });
+    });
+    
+    // Добавить эффекты при наведении на тарифы
+    document.querySelectorAll('.pricing-option').forEach(option => {
+        option.addEventListener('mouseenter', function() {
+            this.style.boxShadow = "0 10px 30px rgba(0, 255, 0, 0.3)";
+        });
+        
+        option.addEventListener('mouseleave', function() {
+            this.style.boxShadow = "";
+        });
+    });
+    
+    // Добавить анимацию для популярного тарифа
+    const popularOption = document.querySelector('.pricing-option.popular');
+    if (popularOption) {
+        setInterval(() => {
+            popularOption.style.boxShadow = popularOption.style.boxShadow 
+                ? "" 
+                : "0 0 30px rgba(255, 204, 0, 0.7)";
+        }, 2000);
+    }
+    
+    // Дополнительные анимации для визуального интереса
+    setInterval(() => {
+        // Случайная анимация для заголовка
+        if (Math.random() > 0.7) {
+            const title = document.querySelector('.main-title');
+            title.style.transform = "scale(1.02)";
+            setTimeout(() => {
+                title.style.transform = "";
+            }, 300);
+        }
+        
+        // Случайное мигание точек попыток
+        if (Math.random() > 0.8 && attempts > 0) {
+            const randomDot = document.querySelector(`.attempt-dot:nth-child(${Math.floor(Math.random() * attempts) + 1})`);
+            if (randomDot && randomDot.classList.contains('active')) {
+                randomDot.style.transform = "scale(1.5)";
+                randomDot.style.boxShadow = "0 0 20px #0f0";
+                setTimeout(() => {
+                    randomDot.style.transform = "";
+                    randomDot.style.boxShadow = "";
+                }, 500);
+            }
+        }
+    }, 3000);
+});
